@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 import mysql.connector
-from app.db import get_connection
+from app.db import get_connection, DEMO_MODE
 
 
 def insert_patron_and_job(
@@ -24,7 +24,13 @@ def insert_patron_and_job(
     """
     Insert (or reuse) a patron and create a new print job.
     Returns the new job_id on success, or None on failure.
+
+    In demo mode, I skip the real database and return a fake job_id.
     """
+    if DEMO_MODE:
+        # In demo mode I pretend everything worked and return a stable fake ID.
+        return 99999
+
     conn = get_connection()
     if not conn:
         return None
@@ -92,6 +98,12 @@ def insert_patron_and_job(
 
 def render_student_submission():
     st.title("Student Print Job Submission")
+
+    if DEMO_MODE:
+        st.info(
+            "Demo mode is enabled. Submissions here will not be written to a live "
+            "database, but you will see a confirmation with a sample Job ID."
+        )
 
     st.write(
         """

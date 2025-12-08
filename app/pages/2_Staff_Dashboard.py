@@ -5,10 +5,34 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import streamlit as st
 import pandas as pd
 import mysql.connector
-from app.db import get_connection
+from app.db import get_connection, DEMO_MODE
 
 
 def fetch_jobs():
+    if DEMO_MODE:
+        # Sample jobs for demo mode so staff can see how the table looks.
+        data = [
+            {
+                "job_id": 101,
+                "job_name": "Phone Stand",
+                "created_at": "2025-01-10 10:00:00",
+                "num_items": 1,
+                "netid": "abc123",
+                "patron_name": "Alex Student",
+                "patron_email": "alex.student@example.edu",
+            },
+            {
+                "job_id": 102,
+                "job_name": "Board Game Pieces",
+                "created_at": "2025-01-11 14:30:00",
+                "num_items": 6,
+                "netid": "xyz789",
+                "patron_name": "Blake Researcher",
+                "patron_email": "blake.researcher@example.edu",
+            },
+        ]
+        return pd.DataFrame(data)
+
     conn = get_connection()
     if not conn:
         return None
@@ -41,6 +65,13 @@ def fetch_jobs():
 
 
 def fetch_machines():
+    if DEMO_MODE:
+        return [
+            {"machine_id": 1, "display_name": "Prusa MK3S+ #1"},
+            {"machine_id": 2, "display_name": "Prusa MK3S+ #2"},
+            {"machine_id": 3, "display_name": "Resin Printer"},
+        ]
+
     conn = get_connection()
     if not conn:
         return []
@@ -64,6 +95,13 @@ def fetch_machines():
 
 
 def fetch_materials():
+    if DEMO_MODE:
+        return [
+            {"material_id": 1, "name": "PLA", "color": "Black", "unit": "g"},
+            {"material_id": 2, "name": "PLA", "color": "White", "unit": "g"},
+            {"material_id": 3, "name": "Resin", "color": "Clear", "unit": "mL"},
+        ]
+
     conn = get_connection()
     if not conn:
         return []
@@ -87,6 +125,10 @@ def fetch_materials():
 
 
 def upsert_job_machine(job_id, machine_id, role, notes):
+    if DEMO_MODE:
+        st.info("Demo mode: machine assignment not saved to a live database.")
+        return True
+
     conn = get_connection()
     if not conn:
         return False
@@ -125,6 +167,10 @@ def upsert_job_machine(job_id, machine_id, role, notes):
 
 
 def upsert_job_material(job_id, material_id, qty, unit, notes):
+    if DEMO_MODE:
+        st.info("Demo mode: material assignment not saved to a live database.")
+        return True
+
     conn = get_connection()
     if not conn:
         return False
@@ -161,6 +207,10 @@ def upsert_job_material(job_id, material_id, qty, unit, notes):
 
 
 def insert_job_charge(job_id, amount, charged_to, notes):
+    if DEMO_MODE:
+        st.info("Demo mode: charge not saved to a live database.")
+        return True
+
     conn = get_connection()
     if not conn:
         return False
@@ -187,6 +237,12 @@ def insert_job_charge(job_id, amount, charged_to, notes):
 
 def render_staff_dashboard():
     st.title("Staff Dashboard")
+
+    if DEMO_MODE:
+        st.info(
+            "Demo mode is enabled. The table below shows sample jobs, and any "
+            "assignments or charges you enter will not be written to a live database."
+        )
 
     st.write(
         """

@@ -6,10 +6,54 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 import mysql.connector
-from app.db import get_connection
+from app.db import get_connection, DEMO_MODE
 
 
 def fetch_export_data():
+    if DEMO_MODE:
+        # Sample joined data to demonstrate the export layout.
+        data = [
+            {
+                "job_id": 101,
+                "job_number": "MS-2025-001",
+                "job_name": "Phone Stand",
+                "created_at": "2025-01-10 10:00:00",
+                "num_items": 1,
+                "netid": "abc123",
+                "patron_name": "Alex Student",
+                "patron_email": "alex.student@example.edu",
+                "machine_name": "Prusa MK3S+ #1",
+                "material_name": "PLA",
+                "material_color": "Black",
+                "machine_role": "primary",
+                "material_qty": 35.0,
+                "material_unit": "g",
+                "charge_amount": 2.50,
+                "charged_to": "student account",
+                "charged_at": "2025-01-11 09:00:00",
+            },
+            {
+                "job_id": 102,
+                "job_number": "MS-2025-002",
+                "job_name": "Board Game Pieces",
+                "created_at": "2025-01-11 14:30:00",
+                "num_items": 6,
+                "netid": "xyz789",
+                "patron_name": "Blake Researcher",
+                "patron_email": "blake.researcher@example.edu",
+                "machine_name": "Prusa MK3S+ #2",
+                "material_name": "PLA",
+                "material_color": "White",
+                "machine_role": "primary",
+                "material_qty": 120.0,
+                "material_unit": "g",
+                "charge_amount": 5.00,
+                "charged_to": "grant fund",
+                "charged_at": "2025-01-12 13:15:00",
+            },
+        ]
+        return pd.DataFrame(data)
+
     conn = get_connection()
     if not conn:
         return None
@@ -60,6 +104,12 @@ def fetch_export_data():
 
 def render_exports_page():
     st.title("Data Exports")
+
+    if DEMO_MODE:
+        st.info(
+            "Demo mode is enabled. The export below uses sample data only and does "
+            "not reflect a live database."
+        )
 
     st.write(
         """
