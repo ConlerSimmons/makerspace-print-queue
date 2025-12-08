@@ -1,41 +1,55 @@
 import streamlit as st
-import mysql.connector
-from mysql.connector import Error
 
-# I use this flag to switch between real DB mode and demo/sample mode.
-DEMO_MODE = bool(st.secrets.get("demo_mode", False))
+# -------------------------------------------------------
+# DEMO MODE TOGGLE
+# -------------------------------------------------------
+# Default is False so production is safe.
+DEMO_MODE = False
+
+# If running inside Streamlit Cloud or if the local secrets file
+# contains demo_mode=true, override it.
+try:
+    if "demo_mode" in st.secrets:
+        DEMO_MODE = bool(st.secrets["demo_mode"])
+except Exception:
+    # If secrets can't load (e.g., running locally without secrets.toml),
+    # keep demo mode OFF by default.
+    DEMO_MODE = False
 
 
+# -------------------------------------------------------
+# DATABASE CONNECTION
+# -------------------------------------------------------
 def get_connection():
     """
-    Create and return a MySQL connection using Streamlit secrets.
-
-    I expect .streamlit/secrets.toml (or Streamlit Cloud secrets) to have:
-
-    [db]
-    host = "127.0.0.1"
-    user = "root"
-    password = "pass123"
-    database = "makerspace_db_final"
-    port = 3307
-
-    When DEMO_MODE is True, I skip making a real database connection and
-    return None instead. The calling code is responsible for handling
-    the demo behavior.
+    Returns:
+      - None if DEMO_MODE=True (the app uses mock data)
+      - A real MySQL connection if DEMO_MODE=False
     """
+
     if DEMO_MODE:
-        # In demo mode I do not talk to a live database.
+        # No real DB in demo mode
         return None
 
+    # Production mode → attempt a real DB connection
     try:
+        host = st.secrets["db"]["host"]
+        user = st.secrets["db"]["user"]
+        password = st.secrets["db"]["password"]
+        database = st.secrets["db"]["database"]
+        port = st.secrets["db"]["port"]
+
+        import mysql.connector
         conn = mysql.connector.connect(
-            host=st.secrets["db"]["host"],
-            user=st.secrets["db"]["user"],
-            password=st.secrets["db"]["password"],
-            database=st.secrets["db"]["database"],
-            port=st.secrets["db"]["port"],
+            host=host,
+            user=user,
+            password=password,
+            database=database,
+            port=port,
         )
         return conn
-    except Error as e:
+
+    except Exception as e:
+        # Streamlit Cloud will show this to you, not end users
         st.error(f"Database connection failed: {e}")
         return None
