@@ -1,5 +1,6 @@
 import sys
 import os
+# Add project root to Python path (so "app.*" imports work when Streamlit loads pages)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
@@ -13,15 +14,41 @@ from app.db import get_connection, DEMO_MODE
 #############################################
 def user_is_staff():
     """
-    Placeholder authentication hook.
-    IT will replace this with real authentication (SSO, LDAP, etc.).
-    For now: ALWAYS True so nothing changes.
+    Placeholder for future authentication.
+
+    IT will eventually replace this with real checks:
+        - Campus SSO
+        - LDAP / Active Directory
+        - NetID role/group memberships
+
+    For now:
+        Always returns True.
+        This ensures nothing breaks and all staff pages stay visible.
     """
     return True
 #############################################
 
 
 def fetch_export_data():
+    """
+    Retrieve full joined job data for reporting/export.
+
+    In DEMO_MODE:
+        Returns a single fabricated row that mimics the real schema.
+        This allows the Export UI to work even without a real database.
+
+    In Production:
+        Executes a multi-table JOIN to assemble:
+            • job info
+            • patron info
+            • machine assignments
+            • material usage
+            • charge history
+
+    Returns:
+        Pandas DataFrame
+        or None if database unavailable.
+    """
     if DEMO_MODE:
         return pd.DataFrame([
             {
@@ -51,6 +78,9 @@ def fetch_export_data():
 
     try:
         cursor = conn.cursor(dictionary=True)
+
+        # Combined export query:
+        # This pulls together jobs, patrons, printers, materials, and charges.
         cursor.execute(
             """
             SELECT
@@ -81,6 +111,7 @@ def fetch_export_data():
             ORDER BY pj.created_at DESC, pj.job_id DESC
             """
         )
+
         rows = cursor.fetchall()
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
@@ -94,10 +125,25 @@ def fetch_export_data():
 
 
 def render_exports_page():
+    """
+    UI for exporting full makerspace job records.
+
+    Provides:
+        • A preview table of all combined job data
+        • A one-click Excel export (OpenXML .xlsx)
+        • Demo mode visibility that mirrors real usage
+
+    This page is primarily used by staff for:
+        • Reporting
+        • Semester summaries
+        • Internal documentation
+        • Financial or usage audits
+    """
+
     st.title("Data Exports")
 
     #############################################
-    # APPLY STAFF HOOK (non-breaking)
+    # APPLY STAFF HOOK (non-breaking placeholder)
     #############################################
     if not user_is_staff():
         st.error("You do not have permission to view this page.")
@@ -105,7 +151,10 @@ def render_exports_page():
     #############################################
 
     if DEMO_MODE:
-        st.info("Demo mode: export data is simulated and does not come from a real database.")
+        st.info(
+            "Demo mode: exporting simulated data only. "
+            "No real database records are used."
+        )
 
     st.write(
         """
@@ -114,23 +163,28 @@ def render_exports_page():
         """
     )
 
+    # Load export dataset (real or simulated)
     df = fetch_export_data()
 
     if df is None:
+        # DB unavailable or failed connection
         st.stop()
 
     if df.empty:
         st.info("No data available yet to export.")
         return
 
+    # Preview section
     st.subheader("Preview")
     st.dataframe(df, use_container_width=True)
 
+    # Convert DataFrame → Excel bytes
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="PrintJobs")
     buffer.seek(0)
 
+    # Download button
     st.download_button(
         label="Download Excel Export",
         data=buffer,

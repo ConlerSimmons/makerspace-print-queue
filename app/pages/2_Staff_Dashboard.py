@@ -1,5 +1,6 @@
 import sys
 import os
+# Add project root to Python path so "app.*" imports work when Streamlit loads pages
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
@@ -12,19 +13,49 @@ from app.db import get_connection, DEMO_MODE
 #############################################
 def user_is_staff():
     """
-    Placeholder authentication hook.
-    IT will replace the return value with real authentication logic.
-    For now: ALWAYS True so nothing changes.
+    Placeholder for future authentication.
+
+    IT will eventually replace this with *real* logic such as:
+        • campus SSO integration  
+        • checking authenticated NetIDs  
+        • checking group memberships (e.g., "makerspace_staff")
+
+    For now:
+        - Always returns True so the dashboard is ALWAYS visible.
+        - This ensures the app remains fully usable during development.
+
+    IMPORTANT:
+        This function is *never* used to block any DB write operations.
+        It ONLY determines whether the staff UI is visible.
     """
     return True
 #############################################
 
 
 def fetch_jobs():
+    """
+    Retrieve all print jobs for staff review.
+
+    Behavior:
+    ---------
+    • If DEMO_MODE is ON → return a small hardcoded job list.
+    • Otherwise → query real MySQL data.
+
+    Returns:
+        Pandas DataFrame (may be empty)
+        or None if DB connection fails.
+    """
     if DEMO_MODE:
         return pd.DataFrame([
-            {"job_id": 1, "job_name": "Demo Job", "created_at": "2025-01-01", "num_items": 2,
-             "netid": "demo123", "patron_name": "Demo Student", "patron_email": "demo@creighton.edu"}
+            {
+                "job_id": 1,
+                "job_name": "Demo Job",
+                "created_at": "2025-01-01",
+                "num_items": 2,
+                "netid": "demo123",
+                "patron_name": "Demo Student",
+                "patron_email": "demo@creighton.edu"
+            }
         ])
 
     conn = get_connection()
@@ -50,15 +81,22 @@ def fetch_jobs():
         )
         rows = cursor.fetchall()
         return pd.DataFrame(rows) if rows else pd.DataFrame()
+
     except mysql.connector.Error as e:
         st.error(f"Error fetching jobs: {e}")
         return None
+
     finally:
         cursor.close()
         conn.close()
 
 
 def fetch_machines():
+    """
+    Fetch list of available 3D printers.
+
+    Demo mode returns a single fake machine.
+    """
     if DEMO_MODE:
         return [{"machine_id": 1, "display_name": "Demo Printer"}]
 
@@ -70,15 +108,22 @@ def fetch_machines():
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT machine_id, display_name FROM machines ORDER BY display_name")
         return cursor.fetchall()
+
     except mysql.connector.Error as e:
         st.error(f"Error fetching machines: {e}")
         return []
+
     finally:
         cursor.close()
         conn.close()
 
 
 def fetch_materials():
+    """
+    Retrieve all printing materials (PLA, ABS, colors, units, etc.).
+
+    Demo mode returns a single simulated material.
+    """
     if DEMO_MODE:
         return [{"material_id": 1, "name": "PLA", "color": "Red", "unit": "g"}]
 
@@ -92,15 +137,25 @@ def fetch_materials():
             "SELECT material_id, name, color, unit FROM materials ORDER BY name, color"
         )
         return cursor.fetchall()
+
     except mysql.connector.Error as e:
         st.error(f"Error fetching materials: {e}")
         return []
+
     finally:
         cursor.close()
         conn.close()
 
 
 def upsert_job_machine(job_id, machine_id, role, notes):
+    """
+    Assign or update the printer (machine) used for a job.
+
+    • In DEMO_MODE → always return True.
+    • Otherwise:
+        - Attempt an UPDATE first.
+        - If no row updated → INSERT a new one.
+    """
     if DEMO_MODE:
         return True
 
@@ -111,6 +166,7 @@ def upsert_job_machine(job_id, machine_id, role, notes):
     try:
         cursor = conn.cursor()
 
+        # First try updating an existing assignment
         cursor.execute(
             """
             UPDATE job_machines
@@ -120,6 +176,7 @@ def upsert_job_machine(job_id, machine_id, role, notes):
             (role or None, notes or None, job_id, machine_id),
         )
 
+        # If nothing updated, insert new assignment
         if cursor.rowcount == 0:
             cursor.execute(
                 """
@@ -143,6 +200,13 @@ def upsert_job_machine(job_id, machine_id, role, notes):
 
 
 def upsert_job_material(job_id, material_id, qty, unit, notes):
+    """
+    Add or update material usage for a job.
+
+    Same pattern as machine assignment:
+        • Try UPDATE first
+        • INSERT if needed
+    """
     if DEMO_MODE:
         return True
 
@@ -185,6 +249,9 @@ def upsert_job_material(job_id, material_id, qty, unit, notes):
 
 
 def insert_job_charge(job_id, amount, charged_to, notes):
+    """
+    Record a billing/charge entry for a print job.
+    """
     if DEMO_MODE:
         return True
 
@@ -216,10 +283,23 @@ def insert_job_charge(job_id, amount, charged_to, notes):
 
 
 def render_staff_dashboard():
+    """
+    Main UI for staff operations.
+
+    This page allows staff to:
+      • View all submitted jobs  
+      • Assign printers  
+      • Assign materials  
+      • Record charges  
+
+    Demo mode alters only the *data sources*, not the UI structure.
+    """
+
     st.title("Staff Dashboard")
 
     #############################################
-    # APPLY THE STAFF HOOK (non-breaking)
+    # Apply the staff access hook
+    # (non-breaking and safe for production)
     #############################################
     if not user_is_staff():
         st.error("You do not have permission to view this page.")
@@ -236,6 +316,9 @@ def render_staff_dashboard():
         """
     )
 
+    # ---------------------------
+    # LOAD ALL JOBS
+    # ---------------------------
     jobs_df = fetch_jobs()
 
     if jobs_df is None:
@@ -249,13 +332,16 @@ def render_staff_dashboard():
 
     job_ids = jobs_df["job_id"].tolist() if not jobs_df.empty else []
 
+    # ---------------------------
     # MACHINE ASSIGNMENT
+    # ---------------------------
     st.subheader("Assign / Update Machine for a Job")
     machines = fetch_machines()
 
     if job_ids and machines:
         with st.form("assign_machine_form"):
             selected_job = st.selectbox("Job ID", job_ids)
+
             machine_labels = [f"{m['display_name']} (ID {m['machine_id']})" for m in machines]
             machine_ids = [m["machine_id"] for m in machines]
 
@@ -264,6 +350,7 @@ def render_staff_dashboard():
                 range(len(machine_ids)),
                 format_func=lambda i: machine_labels[i],
             )
+
             role_val = st.text_input("Machine Role (optional)")
             notes = st.text_area("Machine Notes (optional)")
 
@@ -281,13 +368,16 @@ def render_staff_dashboard():
     else:
         st.info("No jobs or machines available.")
 
+    # ---------------------------
     # MATERIAL ASSIGNMENT
+    # ---------------------------
     st.subheader("Assign / Update Material for a Job")
     materials = fetch_materials()
 
     if job_ids and materials:
         with st.form("assign_material_form"):
             selected_job_mat = st.selectbox("Job ID (materials)", job_ids, key="job_for_material")
+
             material_labels = [
                 f"{m['name']} ({m['color'] or 'no color'}) [ID {m['material_id']}]"
                 for m in materials
@@ -299,6 +389,7 @@ def render_staff_dashboard():
                 range(len(material_ids)),
                 format_func=lambda i: material_labels[i],
             )
+
             qty = st.number_input("Quantity", min_value=0.0, step=0.1)
             unit = st.text_input("Unit (optional)")
             mat_notes = st.text_area("Material Notes (optional)")
@@ -321,12 +412,15 @@ def render_staff_dashboard():
     else:
         st.info("No jobs or materials available.")
 
+    # ---------------------------
     # CHARGES
+    # ---------------------------
     st.subheader("Record a Charge for a Job")
 
     if job_ids:
         with st.form("charge_form"):
             selected_job_charge = st.selectbox("Job ID (charges)", job_ids, key="job_for_charge")
+
             amount = st.number_input("Amount (required)", min_value=0.0, step=0.5)
             charged_to = st.text_input("Charged To (optional)")
             charge_notes = st.text_area("Charge Notes (optional)")
