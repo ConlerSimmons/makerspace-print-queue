@@ -8,6 +8,18 @@ from io import BytesIO
 import mysql.connector
 from app.db import get_connection, DEMO_MODE
 
+#############################################
+# STAFF AUTHENTICATION HOOK (SAFE & OPTIONAL)
+#############################################
+def user_is_staff():
+    """
+    Placeholder authentication hook.
+    IT will replace this with real authentication (SSO, LDAP, etc.).
+    For now: ALWAYS True so nothing changes.
+    """
+    return True
+#############################################
+
 
 def fetch_export_data():
     if DEMO_MODE:
@@ -69,7 +81,6 @@ def fetch_export_data():
             ORDER BY pj.created_at DESC, pj.job_id DESC
             """
         )
-
         rows = cursor.fetchall()
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
@@ -84,6 +95,14 @@ def fetch_export_data():
 
 def render_exports_page():
     st.title("Data Exports")
+
+    #############################################
+    # APPLY STAFF HOOK (non-breaking)
+    #############################################
+    if not user_is_staff():
+        st.error("You do not have permission to view this page.")
+        st.stop()
+    #############################################
 
     if DEMO_MODE:
         st.info("Demo mode: export data is simulated and does not come from a real database.")

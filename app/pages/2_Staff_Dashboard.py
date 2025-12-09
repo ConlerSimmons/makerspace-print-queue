@@ -7,6 +7,18 @@ import pandas as pd
 import mysql.connector
 from app.db import get_connection, DEMO_MODE
 
+#############################################
+# STAFF AUTHENTICATION HOOK (SAFE & OPTIONAL)
+#############################################
+def user_is_staff():
+    """
+    Placeholder authentication hook.
+    IT will replace the return value with real authentication logic.
+    For now: ALWAYS True so nothing changes.
+    """
+    return True
+#############################################
+
 
 def fetch_jobs():
     if DEMO_MODE:
@@ -205,6 +217,14 @@ def insert_job_charge(job_id, amount, charged_to, notes):
 
 def render_staff_dashboard():
     st.title("Staff Dashboard")
+
+    #############################################
+    # APPLY THE STAFF HOOK (non-breaking)
+    #############################################
+    if not user_is_staff():
+        st.error("You do not have permission to view this page.")
+        st.stop()
+    #############################################
 
     if DEMO_MODE:
         st.info("Demo mode: database functions use simulated data.")
