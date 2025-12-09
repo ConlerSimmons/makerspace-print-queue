@@ -12,7 +12,7 @@ It includes:
 
 ---
 
-## 🏗️ High-Level Architecture Overview
+## High-Level Architecture Overview
 
 Below is a **text-based architecture diagram** describing how the system works.  
 IT may later replace the authentication layer or add backend integrations, but the core flow remains the same.
@@ -62,7 +62,7 @@ IT may later replace the authentication layer or add backend integrations, but t
 
 ---
 
-## 📁 Project Structure & File Purpose
+## Project Structure & File Purpose
 
 ```
 makerspace-print-queue/
@@ -88,7 +88,7 @@ makerspace-print-queue/
 
 ---
 
-## 🧑‍💻 Developer Setup Guide (Local Machine)
+## Developer Setup Guide (Local Machine)
 
 This section explains exactly how a developer or student should run the project locally.
 
@@ -170,7 +170,7 @@ This opens the multipage interface in your browser.
 
 ---
 
-### ✔️ You should now see:
+### You should now see:
 - Home page  
 - Student Submission  
 - Staff Dashboard  
@@ -180,7 +180,7 @@ And everything should work **with your real local database** when `demo_mode = f
 
 ---
 
-## 🛠️ Demo Mode (Used for Streamlit Cloud)
+## Demo Mode (Used for Streamlit Cloud)
 
 Streamlit Cloud **cannot connect to a local DB**, so this repository includes a **demo mode flag**:
 
@@ -203,7 +203,7 @@ This allows:
 
 ---
 
-## 🏛️ IT Implementation Guide (Production Deployment)
+## IT Implementation Guide (Production Deployment)
 
 This section is written specifically for Creighton IT, showing what they must do to deploy the production version.
 
@@ -298,7 +298,7 @@ No further code changes required.
 
 ---
 
-## 📌 Final Notes
+## Final Notes
 
 - This project is built to be **simple**, **secure**, and **easy to maintain**  
 - Developers can run everything locally with MySQL or Docker  
