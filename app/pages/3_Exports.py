@@ -11,48 +11,27 @@ from app.db import get_connection, DEMO_MODE
 
 def fetch_export_data():
     if DEMO_MODE:
-        # Sample joined data to demonstrate the export layout.
-        data = [
+        return pd.DataFrame([
             {
-                "job_id": 101,
-                "job_number": "MS-2025-001",
-                "job_name": "Phone Stand",
-                "created_at": "2025-01-10 10:00:00",
-                "num_items": 1,
-                "netid": "abc123",
-                "patron_name": "Alex Student",
-                "patron_email": "alex.student@example.edu",
-                "machine_name": "Prusa MK3S+ #1",
+                "job_id": 1,
+                "job_number": "D-001",
+                "job_name": "Demo Job",
+                "created_at": "2025-01-01",
+                "num_items": 2,
+                "netid": "demo123",
+                "patron_name": "Demo Student",
+                "patron_email": "demo@creighton.edu",
+                "machine_name": "Demo Printer",
                 "material_name": "PLA",
-                "material_color": "Black",
+                "material_color": "Red",
                 "machine_role": "primary",
-                "material_qty": 35.0,
-                "material_unit": "g",
-                "charge_amount": 2.50,
-                "charged_to": "student account",
-                "charged_at": "2025-01-11 09:00:00",
-            },
-            {
-                "job_id": 102,
-                "job_number": "MS-2025-002",
-                "job_name": "Board Game Pieces",
-                "created_at": "2025-01-11 14:30:00",
-                "num_items": 6,
-                "netid": "xyz789",
-                "patron_name": "Blake Researcher",
-                "patron_email": "blake.researcher@example.edu",
-                "machine_name": "Prusa MK3S+ #2",
-                "material_name": "PLA",
-                "material_color": "White",
-                "machine_role": "primary",
-                "material_qty": 120.0,
+                "material_qty": 10,
                 "material_unit": "g",
                 "charge_amount": 5.00,
-                "charged_to": "grant fund",
-                "charged_at": "2025-01-12 13:15:00",
-            },
-        ]
-        return pd.DataFrame(data)
+                "charged_to": "Demo Account",
+                "charged_at": "2025-01-02"
+            }
+        ])
 
     conn = get_connection()
     if not conn:
@@ -90,6 +69,7 @@ def fetch_export_data():
             ORDER BY pj.created_at DESC, pj.job_id DESC
             """
         )
+
         rows = cursor.fetchall()
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
@@ -106,10 +86,7 @@ def render_exports_page():
     st.title("Data Exports")
 
     if DEMO_MODE:
-        st.info(
-            "Demo mode is enabled. The export below uses sample data only and does "
-            "not reflect a live database."
-        )
+        st.info("Demo mode: export data is simulated and does not come from a real database.")
 
     st.write(
         """
@@ -139,10 +116,7 @@ def render_exports_page():
         label="Download Excel Export",
         data=buffer,
         file_name="makerspace_print_jobs_export.xlsx",
-        mime=(
-            "application/vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
-        ),
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 

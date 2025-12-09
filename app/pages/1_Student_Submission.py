@@ -23,13 +23,10 @@ def insert_patron_and_job(
 ):
     """
     Insert (or reuse) a patron and create a new print job.
-    Returns the new job_id on success, or None on failure.
-
-    In demo mode, I skip the real database and return a fake job_id.
     """
     if DEMO_MODE:
-        # In demo mode I pretend everything worked and return a stable fake ID.
-        return 99999
+        # Simulate a successful insert
+        return 9999
 
     conn = get_connection()
     if not conn:
@@ -38,17 +35,13 @@ def insert_patron_and_job(
     try:
         cursor = conn.cursor(dictionary=True)
 
-        # 1) Check if patron already exists by netid
-        cursor.execute(
-            "SELECT patron_id FROM patrons WHERE netid = %s",
-            (netid,),
-        )
+        # 1) Check if patron exists
+        cursor.execute("SELECT patron_id FROM patrons WHERE netid = %s", (netid,))
         row = cursor.fetchone()
 
         if row:
             patron_id = row["patron_id"]
         else:
-            # 2) Insert new patron
             cursor.execute(
                 """
                 INSERT INTO patrons (netid, name, email, phone, affiliation, status)
@@ -58,7 +51,6 @@ def insert_patron_and_job(
             )
             patron_id = cursor.lastrowid
 
-        # 3) Insert print job
         cursor.execute(
             """
             INSERT INTO print_jobs (
@@ -82,8 +74,8 @@ def insert_patron_and_job(
                 notes or None,
             ),
         )
-        job_id = cursor.lastrowid
 
+        job_id = cursor.lastrowid
         conn.commit()
         return job_id
 
@@ -91,6 +83,7 @@ def insert_patron_and_job(
         conn.rollback()
         st.error(f"Error inserting into database: {e}")
         return None
+
     finally:
         cursor.close()
         conn.close()
@@ -100,10 +93,7 @@ def render_student_submission():
     st.title("Student Print Job Submission")
 
     if DEMO_MODE:
-        st.info(
-            "Demo mode is enabled. Submissions here will not be written to a live "
-            "database, but you will see a confirmation with a sample Job ID."
-        )
+        st.info("Demo mode: form submissions are simulated.")
 
     st.write(
         """
@@ -129,50 +119,40 @@ def render_student_submission():
         st.subheader("Print Job Details")
 
         job_name = st.text_input("Job Name / Description (required)")
-        num_items = st.number_input(
-            "Number of Items (optional)", min_value=0, step=1, format="%d",
-        )
+        num_items = st.number_input("Number of Items (optional)", min_value=0, step=1, format="%d")
 
         is_class_assign = st.checkbox("Is this for a class assignment?")
         support_needed = st.checkbox("Do you think support material will be needed?")
 
-        special_instructions = st.text_area(
-            "Special Instructions (optional)",
-            help="Anything specific the staff should know about your print.",
-        )
-
-        notes = st.text_area(
-            "Additional Notes (optional)",
-            help="Any extra context or information.",
-        )
+        special_instructions = st.text_area("Special Instructions (optional)")
+        notes = st.text_area("Additional Notes (optional)")
 
         submitted = st.form_submit_button("Submit Print Job")
 
     if submitted:
-        # Validate required fields
         if not netid or not name or not email or not job_name:
-            st.error("Please fill in all required fields (NetID, Name, Email, Job Name).")
+            st.error("Please fill in all required fields.")
             return
 
         job_id = insert_patron_and_job(
-            netid=netid.strip(),
-            name=name.strip(),
-            email=email.strip(),
-            phone=phone.strip() if phone else None,
-            affiliation=affiliation.strip() if affiliation else None,
-            status=status,
-            job_name=job_name.strip(),
-            num_items=int(num_items) if num_items is not None else None,
-            is_class_assign=is_class_assign,
-            special_instructions=special_instructions,
-            support_needed=support_needed,
-            notes=notes,
+            netid.strip(),
+            name.strip(),
+            email.strip(),
+            phone.strip() if phone else None,
+            affiliation.strip() if affiliation else None,
+            status,
+            job_name.strip(),
+            int(num_items) if num_items is not None else None,
+            is_class_assign,
+            special_instructions,
+            support_needed,
+            notes,
         )
 
         if job_id is not None:
             st.success(f"Your print job has been submitted! Reference Job ID: {job_id}")
         else:
-            st.error("There was a problem submitting your job. Please try again or contact staff.")
+            st.error("There was a problem submitting your job.")
 
 
 if __name__ == "__main__":

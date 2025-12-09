@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
-from app.db import DEMO_MODE   # <-- import our shared demo flag
+from app.db import DEMO_MODE  # <-- import demo mode flag
 
 
 def main():
@@ -15,13 +15,11 @@ def main():
         layout="wide",
     )
 
-    st.title("Makerspace Print Queue")
-
-    # -------------------------------
-    # DEMO MODE INDICATOR (small & subtle)
-    # -------------------------------
+    # Small banner if demo mode is ON
     if DEMO_MODE:
-        st.info("Demo mode is currently ON — database actions are simulated.")
+        st.warning("**Demo Mode is ON — database actions are simulated and no real data is stored.**")
+
+    st.title("Makerspace Print Queue")
 
     st.write(
         """
@@ -39,10 +37,8 @@ def main():
     st.markdown(
         """
         1. **Students** submit jobs on the *Student Submission* page.  
-        2. Jobs are stored in the **makerspace_db_final** MySQL database  
-           *(or simulated during demo mode)*.  
-        3. **Staff** review jobs, assign machines/materials, and record charges  
-           on the *Staff Dashboard*.  
+        2. Jobs are stored in the **makerspace_db_final** MySQL database *(or simulated during demo mode).*  
+        3. **Staff** review jobs, assign machines/materials, and record charges on the *Staff Dashboard*.  
         4. Staff can export data to Excel on the *Exports* page.
         """
     )

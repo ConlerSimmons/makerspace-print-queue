@@ -10,28 +10,10 @@ from app.db import get_connection, DEMO_MODE
 
 def fetch_jobs():
     if DEMO_MODE:
-        # Sample jobs for demo mode so staff can see how the table looks.
-        data = [
-            {
-                "job_id": 101,
-                "job_name": "Phone Stand",
-                "created_at": "2025-01-10 10:00:00",
-                "num_items": 1,
-                "netid": "abc123",
-                "patron_name": "Alex Student",
-                "patron_email": "alex.student@example.edu",
-            },
-            {
-                "job_id": 102,
-                "job_name": "Board Game Pieces",
-                "created_at": "2025-01-11 14:30:00",
-                "num_items": 6,
-                "netid": "xyz789",
-                "patron_name": "Blake Researcher",
-                "patron_email": "blake.researcher@example.edu",
-            },
-        ]
-        return pd.DataFrame(data)
+        return pd.DataFrame([
+            {"job_id": 1, "job_name": "Demo Job", "created_at": "2025-01-01", "num_items": 2,
+             "netid": "demo123", "patron_name": "Demo Student", "patron_email": "demo@creighton.edu"}
+        ])
 
     conn = get_connection()
     if not conn:
@@ -66,11 +48,7 @@ def fetch_jobs():
 
 def fetch_machines():
     if DEMO_MODE:
-        return [
-            {"machine_id": 1, "display_name": "Prusa MK3S+ #1"},
-            {"machine_id": 2, "display_name": "Prusa MK3S+ #2"},
-            {"machine_id": 3, "display_name": "Resin Printer"},
-        ]
+        return [{"machine_id": 1, "display_name": "Demo Printer"}]
 
     conn = get_connection()
     if not conn:
@@ -78,13 +56,7 @@ def fetch_machines():
 
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute(
-            """
-            SELECT machine_id, display_name
-            FROM machines
-            ORDER BY display_name
-            """
-        )
+        cursor.execute("SELECT machine_id, display_name FROM machines ORDER BY display_name")
         return cursor.fetchall()
     except mysql.connector.Error as e:
         st.error(f"Error fetching machines: {e}")
@@ -96,11 +68,7 @@ def fetch_machines():
 
 def fetch_materials():
     if DEMO_MODE:
-        return [
-            {"material_id": 1, "name": "PLA", "color": "Black", "unit": "g"},
-            {"material_id": 2, "name": "PLA", "color": "White", "unit": "g"},
-            {"material_id": 3, "name": "Resin", "color": "Clear", "unit": "mL"},
-        ]
+        return [{"material_id": 1, "name": "PLA", "color": "Red", "unit": "g"}]
 
     conn = get_connection()
     if not conn:
@@ -109,11 +77,7 @@ def fetch_materials():
     try:
         cursor = conn.cursor(dictionary=True)
         cursor.execute(
-            """
-            SELECT material_id, name, color, unit
-            FROM materials
-            ORDER BY name, color
-            """
+            "SELECT material_id, name, color, unit FROM materials ORDER BY name, color"
         )
         return cursor.fetchall()
     except mysql.connector.Error as e:
@@ -126,7 +90,6 @@ def fetch_materials():
 
 def upsert_job_machine(job_id, machine_id, role, notes):
     if DEMO_MODE:
-        st.info("Demo mode: machine assignment not saved to a live database.")
         return True
 
     conn = get_connection()
@@ -136,7 +99,6 @@ def upsert_job_machine(job_id, machine_id, role, notes):
     try:
         cursor = conn.cursor()
 
-        # Try update existing row
         cursor.execute(
             """
             UPDATE job_machines
@@ -145,8 +107,8 @@ def upsert_job_machine(job_id, machine_id, role, notes):
             """,
             (role or None, notes or None, job_id, machine_id),
         )
+
         if cursor.rowcount == 0:
-            # No existing row -> insert
             cursor.execute(
                 """
                 INSERT INTO job_machines (job_id, machine_id, role, notes)
@@ -157,10 +119,12 @@ def upsert_job_machine(job_id, machine_id, role, notes):
 
         conn.commit()
         return True
+
     except mysql.connector.Error as e:
         conn.rollback()
         st.error(f"Error updating job_machines: {e}")
         return False
+
     finally:
         cursor.close()
         conn.close()
@@ -168,7 +132,6 @@ def upsert_job_machine(job_id, machine_id, role, notes):
 
 def upsert_job_material(job_id, material_id, qty, unit, notes):
     if DEMO_MODE:
-        st.info("Demo mode: material assignment not saved to a live database.")
         return True
 
     conn = get_connection()
@@ -186,6 +149,7 @@ def upsert_job_material(job_id, material_id, qty, unit, notes):
             """,
             (qty, unit or None, notes or None, job_id, material_id),
         )
+
         if cursor.rowcount == 0:
             cursor.execute(
                 """
@@ -197,10 +161,12 @@ def upsert_job_material(job_id, material_id, qty, unit, notes):
 
         conn.commit()
         return True
+
     except mysql.connector.Error as e:
         conn.rollback()
         st.error(f"Error updating job_materials: {e}")
         return False
+
     finally:
         cursor.close()
         conn.close()
@@ -208,7 +174,6 @@ def upsert_job_material(job_id, material_id, qty, unit, notes):
 
 def insert_job_charge(job_id, amount, charged_to, notes):
     if DEMO_MODE:
-        st.info("Demo mode: charge not saved to a live database.")
         return True
 
     conn = get_connection()
@@ -224,12 +189,15 @@ def insert_job_charge(job_id, amount, charged_to, notes):
             """,
             (job_id, amount, charged_to or None, notes or None),
         )
+
         conn.commit()
         return True
+
     except mysql.connector.Error as e:
         conn.rollback()
         st.error(f"Error inserting charge: {e}")
         return False
+
     finally:
         cursor.close()
         conn.close()
@@ -239,10 +207,7 @@ def render_staff_dashboard():
     st.title("Staff Dashboard")
 
     if DEMO_MODE:
-        st.info(
-            "Demo mode is enabled. The table below shows sample jobs, and any "
-            "assignments or charges you enter will not be written to a live database."
-        )
+        st.info("Demo mode: database functions use simulated data.")
 
     st.write(
         """
@@ -264,7 +229,7 @@ def render_staff_dashboard():
 
     job_ids = jobs_df["job_id"].tolist() if not jobs_df.empty else []
 
-    # 1) MACHINE ASSIGNMENT
+    # MACHINE ASSIGNMENT
     st.subheader("Assign / Update Machine for a Job")
     machines = fetch_machines()
 
@@ -279,24 +244,24 @@ def render_staff_dashboard():
                 range(len(machine_ids)),
                 format_func=lambda i: machine_labels[i],
             )
-            role_val = st.text_input("Machine Role (optional, e.g. 'primary')")
+            role_val = st.text_input("Machine Role (optional)")
             notes = st.text_area("Machine Notes (optional)")
 
             submit_machine = st.form_submit_button("Save Machine Assignment")
 
         if submit_machine:
             ok = upsert_job_machine(
-                job_id=selected_job,
-                machine_id=machine_ids[machine_idx],
-                role=role_val,
-                notes=notes,
+                selected_job,
+                machine_ids[machine_idx],
+                role_val,
+                notes,
             )
             if ok:
                 st.success("Machine assignment saved.")
     else:
-        st.info("No jobs or machines available for assignment.")
+        st.info("No jobs or machines available.")
 
-    # 2) MATERIAL ASSIGNMENT
+    # MATERIAL ASSIGNMENT
     st.subheader("Assign / Update Material for a Job")
     materials = fetch_materials()
 
@@ -314,8 +279,8 @@ def render_staff_dashboard():
                 range(len(material_ids)),
                 format_func=lambda i: material_labels[i],
             )
-            qty = st.number_input("Quantity (matching unit below)", min_value=0.0, step=0.1)
-            unit = st.text_input("Unit (optional, default from material)", value="")
+            qty = st.number_input("Quantity", min_value=0.0, step=0.1)
+            unit = st.text_input("Unit (optional)")
             mat_notes = st.text_area("Material Notes (optional)")
 
             submit_material = st.form_submit_button("Save Material Assignment")
@@ -325,18 +290,18 @@ def render_staff_dashboard():
                 st.error("Quantity must be greater than zero.")
             else:
                 ok = upsert_job_material(
-                    job_id=selected_job_mat,
-                    material_id=material_ids[mat_idx],
-                    qty=qty,
-                    unit=unit if unit.strip() else None,
-                    notes=mat_notes,
+                    selected_job_mat,
+                    material_ids[mat_idx],
+                    qty,
+                    unit if unit.strip() else None,
+                    mat_notes,
                 )
                 if ok:
                     st.success("Material assignment saved.")
     else:
-        st.info("No jobs or materials available for assignment.")
+        st.info("No jobs or materials available.")
 
-    # 3) CHARGES
+    # CHARGES
     st.subheader("Record a Charge for a Job")
 
     if job_ids:
@@ -353,10 +318,10 @@ def render_staff_dashboard():
                 st.error("Amount must be greater than zero.")
             else:
                 ok = insert_job_charge(
-                    job_id=selected_job_charge,
-                    amount=amount,
-                    charged_to=charged_to,
-                    notes=charge_notes,
+                    selected_job_charge,
+                    amount,
+                    charged_to,
+                    charge_notes,
                 )
                 if ok:
                     st.success("Charge recorded.")
