@@ -124,24 +124,109 @@ pip install -r requirements.txt
 
 ---
 
-### **4. Ensure MySQL or Docker DB is Running**
+### **4. Set Up MySQL Database Using Docker**
 
-You must have **either**:
+This project requires a MySQL database. The easiest way is to use Docker.
 
-- A local MySQL server  
-**OR**
-- A Docker container running MySQL on port `3307`
+#### **Step 4.1: Install Docker**
 
-Example Docker command:
+If you don't have Docker installed:
+
+- **macOS**: Download [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop)
+- **Windows**: Download [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
+- **Linux**: Follow [Docker installation guide](https://docs.docker.com/engine/install/)
+
+After installation, verify Docker is running:
 ```bash
-docker run --name makerspace-mysql -p 3307:3306 -e MYSQL_ROOT_PASSWORD=pass123 -d mysql:8
+docker --version
 ```
+
+#### **Step 4.2: Create MySQL Container**
+
+Run this command to create and start a MySQL container:
+
+```bash
+docker run --name mysql542 \
+  -p 3307:3306 \
+  -e MYSQL_ROOT_PASSWORD=pass123 \
+  -e MYSQL_DATABASE=makerspace_db_final \
+  -d mysql:8.0
+```
+
+**What this does:**
+- Creates a container named `mysql542`
+- Maps port `3307` on your computer to MySQL's port `3306`
+- Sets root password to `pass123`
+- Creates database `makerspace_db_final` automatically
+- Runs MySQL 8.0 in the background
+
+#### **Step 4.3: Verify Container is Running**
+
+Check that your MySQL container is running:
+```bash
+docker ps
+```
+
+You should see a container named `mysql542` in the list.
+
+**Common Docker Commands:**
+```bash
+# Start the container (if stopped)
+docker start mysql542
+
+# Stop the container
+docker stop mysql542
+
+# View logs
+docker logs mysql542
+
+# Remove container (careful - deletes all data!)
+docker rm -f mysql542
+```
+
+#### **Step 4.4: Create Database Tables**
+
+Now run the SQL script to create all tables:
+
+```bash
+# Navigate to project directory
+cd makerspace-print-queue
+
+# Run the main SQL script to create all tables
+docker exec -i mysql542 mysql -uroot -ppass123 makerspace_db_final < sql/Final_SQL_Script.sql
+```
+
+**Expected output:** No errors (warnings about password on command line are OK)
+
+#### **Step 4.5: Verify Tables Were Created**
+
+```bash
+docker exec -i mysql542 mysql -uroot -ppass123 -e "USE makerspace_db_final; SHOW TABLES;"
+```
+
+You should see these tables:
+- `patrons`
+- `print_jobs`
+- `sign_ins`
+- `staff`
+- `machines`
+- `materials`
+- `job_machines`
+- `job_materials`
+- `job_charges`
 
 ---
 
 ### **5. Configure** `.streamlit/secrets.toml`
 
-Example:
+Create a file at `.streamlit/secrets.toml` (create the `.streamlit` folder if it doesn't exist):
+
+```bash
+mkdir -p .streamlit
+```
+
+Then create/edit `.streamlit/secrets.toml` with this content:
+
 ```toml
 [db]
 host = "127.0.0.1"
@@ -161,22 +246,63 @@ Make sure this file exists locally — it is **not** committed to GitHub.
 
 ### **6. Run the Application**
 
-From the project root:
+Make sure:
+1. ✅ Docker container `mysql542` is running (`docker ps`)
+2. ✅ Database tables are created
+3. ✅ `.streamlit/secrets.toml` is configured
+
+Then from the project root:
 ```bash
 python3 -m streamlit run app/Home.py
 ```
 
-This opens the multipage interface in your browser.
+This opens the multipage interface in your browser at `http://localhost:8501`
 
 ---
 
-### You should now see:
-- Home page  
-- Student Submission  
-- Staff Dashboard  
-- Exports  
+### **You should now see:**
+- **Sign In** - Visitor sign-in page  
+- **3D Printing Submissions** - Submit print jobs with file uploads
+- **Staff Dashboard** - Manage jobs, download files, assign machines/materials
+- **Exports** - Two Excel export options (Print Jobs & Sign-Ins by fiscal year/quarter)
 
-And everything should work **with your real local database** when `demo_mode = false`.
+And everything should work **with your real Docker database** when `demo_mode = false`.
+
+---
+
+## Troubleshooting
+
+### "Can't connect to MySQL server"
+- Make sure Docker container is running: `docker ps`
+- Start it if stopped: `docker start mysql542`
+
+### "Table doesn't exist"
+- Run the SQL script again: 
+  ```bash
+  docker exec -i mysql542 mysql -uroot -ppass123 makerspace_db_final < sql/Final_SQL_Script.sql
+  ```
+
+### "Unknown column 'fiscal_quarter'"
+- Run this to add missing column:
+  ```bash
+  docker exec -i mysql542 mysql -uroot -ppass123 -e "USE makerspace_db_final; ALTER TABLE sign_ins ADD COLUMN fiscal_quarter INT NULL DEFAULT NULL AFTER fiscal_year;"
+  ```
+
+### Reset Everything (Fresh Start)
+```bash
+# Stop and remove container
+docker stop mysql542
+docker rm mysql542
+
+# Create new container
+docker run --name mysql542 -p 3307:3306 -e MYSQL_ROOT_PASSWORD=pass123 -e MYSQL_DATABASE=makerspace_db_final -d mysql:8.0
+
+# Wait 10 seconds for MySQL to start
+sleep 10
+
+# Create all tables
+docker exec -i mysql542 mysql -uroot -ppass123 makerspace_db_final < sql/Final_SQL_Script.sql
+```
 
 ---
 

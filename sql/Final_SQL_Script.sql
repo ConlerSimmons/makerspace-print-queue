@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS `makerspace_db_final`.`print_jobs` (
   `special_instructions` TEXT NULL DEFAULT NULL,
   `patron_paid_materials` TINYINT(1) NULL DEFAULT '0',
   `support_needed` TINYINT(1) NULL DEFAULT '0',
+  `fiscal_year` INT NULL DEFAULT NULL,
   PRIMARY KEY (`job_id`),
   UNIQUE INDEX `job_number` (`job_number` ASC) VISIBLE,
   INDEX `fk_printjobs_patrons` (`patron_id` ASC) VISIBLE,
@@ -252,6 +253,27 @@ ENGINE = InnoDB
 AUTO_INCREMENT = 6
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
+
+
+-- -----------------------------------------------------
+-- Table `makerspace_db_final`.`sign_ins`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `makerspace_db_final`.`sign_ins` (
+  `sign_in_id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(200) NOT NULL,
+  `email` VARCHAR(200) NOT NULL,
+  `sign_in_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `fiscal_year` INT NULL DEFAULT NULL,
+  `fiscal_quarter` INT NULL DEFAULT NULL,
+  PRIMARY KEY (`sign_in_id`),
+  INDEX `idx_sign_in_time` (`sign_in_time` ASC) VISIBLE,
+  INDEX `idx_fiscal_year` (`fiscal_year` ASC) VISIBLE,
+  INDEX `idx_email` (`email` ASC) VISIBLE)
+ENGINE = InnoDB
+AUTO_INCREMENT = 1
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_0900_ai_ci
+COMMENT = 'Tracks visitor sign-ins to the Makerspace for involvement reporting';
 
 
 SET SQL_MODE=@OLD_SQL_MODE;

@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 import mysql.connector
 from app.db import get_connection, DEMO_MODE
+from pathlib import Path
 
 #############################################
 # STAFF AUTHENTICATION HOOK (SAFE & OPTIONAL)
@@ -52,6 +53,7 @@ def fetch_jobs():
                 "job_name": "Demo Job",
                 "created_at": "2025-01-01",
                 "num_items": 2,
+                "upload_path": "uploads/demo_file.stl",
                 "netid": "demo123",
                 "patron_name": "Demo Student",
                 "patron_email": "demo@creighton.edu"
@@ -71,6 +73,7 @@ def fetch_jobs():
                 pj.job_name,
                 pj.created_at,
                 pj.num_items,
+                pj.upload_path,
                 p.netid,
                 p.name AS patron_name,
                 p.email AS patron_email
@@ -328,6 +331,71 @@ def render_staff_dashboard():
         st.info("No print jobs found yet.")
     else:
         st.subheader("Current Print Jobs")
+        st.dataframe(jobs_df, use_container_width=True)
+        
+        # Add file download section with organization
+        st.subheader("📥 Download Uploaded Files")
+        
+        # Filter jobs that have files
+        jobs_with_files = []
+        for idx, row in jobs_df.iterrows():
+            upload_path = row.get("upload_path")
+            if upload_path and upload_path.strip():
+                file_path = Path(upload_path)
+                if file_path.exists():
+                    jobs_with_files.append({
+                        "job_id": row["job_id"],
+                        "job_name": row["job_name"],
+                        "file_path": file_path,
+                        "created_at": row.get("created_at", "")
+                    })
+        
+        if not jobs_with_files:
+            st.info("No uploaded files available for download yet.")
+        else:
+            # Show count
+            st.write(f"**{len(jobs_with_files)}** file(s) available for download")
+            
+            # Add filters
+            col_filter1, col_filter2 = st.columns(2)
+            with col_filter1:
+                show_limit = st.selectbox(
+                    "Show files:",
+                    ["All", 5, 10, 25, 50],
+                    index=0,
+                    key="file_limit"
+                )
+            with col_filter2:
+                if st.button("🔄 Refresh File List", key="refresh_files"):
+                    st.rerun()
+            
+            # Determine how many to show
+            limit = len(jobs_with_files) if show_limit == "All" else int(show_limit)
+            files_to_show = jobs_with_files[:limit]
+            
+            # Display files in an organized expandable section
+            with st.expander(f"📂 View Files ({len(files_to_show)} shown)", expanded=True):
+                for job_info in files_to_show:
+                    col1, col2, col3 = st.columns([2, 2, 1])
+                    with col1:
+                        st.write(f"**Job {job_info['job_id']}:** {job_info['job_name']}")
+                    with col2:
+                        st.caption(f"📎 {job_info['file_path'].name}")
+                    with col3:
+                        with open(job_info['file_path'], "rb") as f:
+                            file_bytes = f.read()
+                        st.download_button(
+                            label="⬇️",
+                            data=file_bytes,
+                            file_name=job_info['file_path'].name,
+                            mime="application/octet-stream",
+                            key=f"download_{job_info['job_id']}",
+                            help="Download file"
+                        )
+            
+            # Show message if there are more files
+            if len(jobs_with_files) > limit:
+                st.info(f"Showing {limit} of {len(jobs_with_files)} files. Change the limit above to see more.")
         st.dataframe(jobs_df, use_container_width=True)
 
     job_ids = jobs_df["job_id"].tolist() if not jobs_df.empty else []

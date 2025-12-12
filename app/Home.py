@@ -46,9 +46,10 @@ def main():
         Welcome to the Creighton Library Makerspace print queue.
 
         Use the navigation on the left to move between:
-        - **Student Submission** – where students submit new print jobs.
-        - **Staff Dashboard** – where staff review jobs and assign machines/materials.
-        - **Exports** – where staff export job data to Excel for reporting or archival.
+        - **Sign In** – quick sign-in for anyone visiting the Makerspace (tracks involvement)
+        - **3D Printing Submissions** – submit new 3D print jobs with file uploads
+        - **Staff Dashboard** – staff interface to review jobs, assign machines/materials, and download files
+        - **Exports** – export print job records or sign-in records to Excel (with fiscal year tracking)
         """
     )
 
@@ -59,10 +60,16 @@ def main():
     st.subheader("How this app works")
     st.markdown(
         """
-        1. **Students** submit jobs on the *Student Submission* page.  
+        **For Visitors:**
+        1. **Sign in** when you arrive at the Makerspace to track involvement.
+        
+        **For Print Jobs:**
+        1. **Students/Staff** submit 3D print jobs on the *3D Printing Submissions* page with file uploads.  
         2. Jobs are stored in the **makerspace_db_final** MySQL database *(or simulated during demo mode).*  
-        3. **Staff** review jobs, assign machines/materials, and record charges on the *Staff Dashboard*.  
-        4. Staff can export data to Excel on the *Exports* page.
+        3. **Staff** review jobs, download print files, assign machines/materials, and record charges on the *Staff Dashboard*.  
+        4. Staff can export two types of data on the *Exports* page:
+           - **3D Print Records** (jobs, materials, charges, fiscal year)
+           - **Sign-In Records** (visitor tracking for involvement metrics)
         """
     )
 
