@@ -433,5 +433,3 @@ No further code changes required.
 - Authentication hook ensures forward-compatibility with Creighton systems  
 
 ---
-
-If you need a **PDF version**, **diagram image**, or **additional internal documentation**, I can generate that as well.
